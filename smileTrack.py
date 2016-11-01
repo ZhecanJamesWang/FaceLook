@@ -117,7 +117,7 @@ class smileTrack(object):
             #phi is positive in left direction (right hand rule)
             phi = -self.rad2deg(np.arctan((float(v2mid[1]))/self.focus))
             realDist = (self.realWidth*d2f)/w
-            faceframe = frame[y+2*h/3:y+h, x:x+w]
+            faceframe = frame[y+3*h/4:y+h, x+w/4:x+3*w/4]
 
 
             smile = smile_cascade.detectMultiScale(faceframe, scaleFactor=1.2, minSize=(10,10))
