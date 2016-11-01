@@ -87,7 +87,52 @@ class smileTrack(object):
         if k == ord('q'):
         	self.runFlag = False
         return (theta+90.0,phi+90.0,realDist)
-    	
+    
+    def outputDistAng_smile(self):
+        theta,phi,realDist = 0, 0, 0
+        # use camerca video feed to calculate distance and angle of face referenced to the camera
+        face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
+        smilePath = "./lib/haarcascade_smile.xml"
+        smile_cascade = cv2.CascadeClassifier(smilePath)
+        
+        ret, frame = self.cap.read() 
+       #faces = [[x,y,w,d]], (x,y) is the top left corner      
+        faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
+        #Need something to buffer x,y,w,d since sometimes it does not detect face
+        
+        for (x,y,w,h) in faces:
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255))
+            #point on the center of the frame
+            center = (x+int(w/2),y+int(h/2))
+            #vector to middle of the frame from the center of the face in pix
+            v2mid = (center[0]-self.mid[0],center[1]-self.mid[1])
+            #distance to middle of the frame from the center of the face in pix
+            d2mid = sqrt(v2mid[0]**2+v2mid[1]**2)
+            #distance to the focal point
+            d2f = sqrt(self.focus**2+d2mid**2)
+            cv2.circle(frame,center,5,(0,0,255),-1)
+            cv2.circle(frame,self.mid,5,(0,255,0),-1)
+            #theta is positive in ccw direction
+            theta = self.rad2deg(np.arctan((float(v2mid[0]))/self.focus))
+            #phi is positive in left direction (right hand rule)
+            phi = -self.rad2deg(np.arctan((float(v2mid[1]))/self.focus))
+            realDist = (self.realWidth*d2f)/w
+            faceframe = frame[y+2*h/3:y+h, x:x+w]
+
+
+            smile = smile_cascade.detectMultiScale(faceframe, scaleFactor=1.2, minSize=(10,10))
+            for (x, y, w, h) in smile:
+                print "Smiling", len(smile), "smiles!"
+                cv2.rectangle(faceframe, (x, y), (x+w, y+h), (255, 255, 0), 1)
+
+        cv2.imshow('Smile Detector',frame)
+
+
+        k = cv2.waitKey(1)
+        if k == ord('q'):
+            self.runFlag = False
+        return (theta+90.0,phi+90.0,realDist)
+
     def close(self):
         self.cap.release()
         cv2.destroyAllWindows() 
@@ -121,7 +166,7 @@ class smileTrack(object):
         # width = 15.0
         # self.calibrate(dist, width)
         while(self.runFlag):
-            (theta,phi,realDist) = self.outputDistAng()
+            (theta,phi,realDist) = self.outputDistAng_smile()
             packet = "(" + '%03d'%int(theta) + "," + '%03d'%int(phi) + "," + '%03d'%int(realDist) + ")"
             print packet
 
