@@ -26,4 +26,6 @@ The biggest challenge is to allow the system to detect a specific person’s fac
 
 
 # Sprint 1 Review Slide
-[Google Slide]: https://docs.google.com/presentation/d/1E72BuQxvra6gPXHz1A6x111EGJ29zGJA3I-6UuhGR20/edit?usp=sharing
+
+
+[Link here]: https://docs.google.com/presentation/d/1E72BuQxvra6gPXHz1A6x111EGJ29zGJA3I-6UuhGR20/edit?usp=sharing
