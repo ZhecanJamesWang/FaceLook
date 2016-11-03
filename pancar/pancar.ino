@@ -21,28 +21,29 @@ float dist = 0.0;
 float ang1 = 0.0;
 float ang2 = 0.0;
 
-float updateRate = 0.5;
+
+
+//float updateRate = 0.5;
+//
+//boolean dstFlag = True;
+//float initDist = 0;
+//boolean firstDistFlag = True;
+//float distThreshold = 0.5;
+//float distToTarget = 10;
+//float speedCons = 0.5;
+//
+//
+//boolean angFlag = False;
+//float initAng = 0;
+//boolean firstAngFlag = False;
+//float angThreshold = 0.5;
+//float angCons = 0.5;
 
 
 
-
-
-boolean dstFlag = True;
-float initDist = 0;
-boolean firstDistFlag = True;
-float distThreshold = 0.5;
-float distToTarget = 10;
-float speedCons = 0.5;
-
-
-boolean angFlag = False;
-float initAng = 0;
-boolean firstAngFlag = False;
-float angThreshold = 0.5;
-float angCons = 0.5;
-
-
-
+float vr = 0;
+float vl = 0;
+int cons = 3;
 
 
 
@@ -104,12 +105,12 @@ void parsepacket(String packet1) {
   ang1 = sTheta.toInt();
   ang2 = sPhi.toInt();
   dist = sDist.toInt();
-//  Serial.print("after:");
-//  Serial.print(ang1);
-//  Serial.print("\t");
-//  Serial.print(ang2);
-//  Serial.print("\t");
-//  Serial.println(dist);
+  //  Serial.print("after:");
+  //  Serial.print(ang1);
+  //  Serial.print("\t");
+  //  Serial.print(ang2);
+  //  Serial.print("\t");
+  //  Serial.println(dist);
 }
 
 void loop() {
@@ -120,47 +121,47 @@ void loop() {
       parsepacket(packet);
 
 
-//// distance checking and setting speed
-//     if(firstDistFlag == True){
-//        initDist = dist;
-//        firstDistFlag = False;
-//      }
-//      if(dstFlag == True){
-//        speed1 = speedCons * (dist - distToTarget);
-//        speed2 = speedCons * (dist - distToTarget);
-//        if(dist - initDist*updateRate < distThreshold){
-//          dstFlag = False;
-//          angFlag = True;
-//          firstAngFlag = True;
-//         }        
-//        }
-////////////////////////////////////////
-//
-//// angle checking and setting speed       
-//     if(firstAngFlag == True){
-//        initAng = ang1;
-//        firstAngFlag = False;
-//      }
-//      if(angFlag == True){
-//        if(ang1 > 0){
-//          speed1 = angCons * ang1;
-//          speed2 = 0;
-//          }else{
-//          speed2 = angCons * abs(ang1)
-//          speed1 = 0;
-//            }
-//        if(ang1 - initAng*updateRate < angThreshold){
-//          angFlag = False;
-//          distFalg = True;
-//          firstDistFlag = True;
-//         }        
-//        }
+      //// distance checking and setting speed
+      //     if(firstDistFlag == True){
+      //        initDist = dist;
+      //        firstDistFlag = False;
+      //      }
+      //      if(dstFlag == True){
+      //        speed1 = speedCons * (dist - distToTarget);
+      //        speed2 = speedCons * (dist - distToTarget);
+      //        if(dist - initDist*updateRate < distThreshold){
+      //          dstFlag = False;
+      //          angFlag = True;
+      //          firstAngFlag = True;
+      //         }
+      //        }
+      ////////////////////////////////////////
+      //
+      //// angle checking and setting speed
+      //     if(firstAngFlag == True){
+      //        initAng = ang1;
+      //        firstAngFlag = False;
+      //      }
+      //      if(angFlag == True){
+      //        if(ang1 > 0){
+      //          speed1 = angCons * ang1;
+      //          speed2 = 0;
+      //          }else{
+      //          speed2 = angCons * abs(ang1)
+      //          speed1 = 0;
+      //            }
+      //        if(ang1 - initAng*updateRate < angThreshold){
+      //          angFlag = False;
+      //          distFalg = True;
+      //          firstDistFlag = True;
+      //         }
+      //        }
 
-//////////////////////////////////////        
+      //////////////////////////////////////
 
 
 
-      
+
 
       if (dist <= 10) {             // if there is not detected face(dist = 0) or the distance is too close, break
         break;
@@ -169,15 +170,17 @@ void loop() {
         if (ang1 >= -5 and ang1 <= 5) {
           goStraight();
         }
-        else if (ang1 >= 0) {
-          turnRight();
-          vr = 20;
-          vl = 20 + cons * (ang1 - 5);
-        }
-        else if (ang1 <= 0) {
-          turnLeft();
+        else if (ang1 > 5) {
+          vr = 20 + cons * (ang1 - 5);
           vl = 20;
-          vr = 20 + cons * (abs(ang1) - 5);
+          motorR->setSpeed(vr);
+          motorL->setSpeed(vl);
+        }
+        else if (ang1 < -5) {
+          vr = 20;
+          vl = 20 + cons * (abs(ang1) - 5);
+          motorR->setSpeed(vr);
+          motorL->setSpeed(vl);
         }
       }
 
