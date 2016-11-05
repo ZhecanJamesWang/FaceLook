@@ -1,24 +1,26 @@
 """ Experiment with face detection and image filtering using OpenCV """
-
+# import the necessary packages
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
 import cv2
 import numpy as np
 from math import sqrt, pi
-import serialout as st
+# import serialout as st
 
 
 class faceTrack(object):
     """class for face tracking algorithm"""
     def __init__(self, calibrateFlag = False):
-        self.cap = cv2.VideoCapture(0)
-        #Initial read of the frame size
-        ret,frame = self.cap.read()
+
         height,width,channel = frame.shape
         self.mid = (int(width/2),int(height/2))     
         self.calibrateFlag = calibrateFlag
         self.focus = 816 # px, webcam focal distance
         self.realWidth = 16  # cm, face width
         self.runFlag = True
-        self.serConn = st.serialConnect()
+        # self.serConn = st.serialConnect()
+
 
     def calibrate(self, realDst, realWidth):
         self.realWidth = realWidth
@@ -53,11 +55,11 @@ class faceTrack(object):
     def rad2deg(self,ang):
         return ang*(180/pi)
     
-    def outputDistAng(self):
+    def outputDistAng(self, frame):
         theta,phi,realDist = 0, 0, 0
         # use camerca video feed to calculate distance and angle of face referenced to the camera
         face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
-        ret, frame = self.cap.read() 
+
        #faces = [[x,y,w,d]], (x,y) is the top left corner      
         faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
         #Need something to buffer x,y,w,d since sometimes it does not detect face
@@ -93,26 +95,34 @@ class faceTrack(object):
      
 
     def run(self):
-        if not self.serConn.isopen:
-            self.serConn.open()
-        if self.calibrateFlag:
-            data = raw_input("please input the distance and face width: (example: distance, width)")
-            [realDst, realWidth] = data.split(",")
-            self.calibrate(float(realDst), float(realWidth))
 
+        # if not self.serConn.isopen:
+            # self.serConn.open()
+        # if self.calibrateFlag:
+        #     data = raw_input("please input the distance and face width: (example: distance, width)")
+        #     [realDst, realWidth] = data.split(",")
+        #     self.calibrate(float(realDst), float(realWidth))
+        with picamera.PiCamera() as camera:
+            with picamera.array.PiRGBArray(camera) as stream:
+                camera.resolution = (320, 240)
         
-        self.serConn.sendSerialdata((0,0,0))
-        while (self.runFlag):
-            (theta,phi,realDist) = self.outputDistAng()
-            packet = "(" + '%03d'%int(theta) + "," + '%03d'%int(phi) + "," + '%03d'%int(realDist) + ")"
-            if packet == '(000,000,000)':
-                print "no face"
-            else:
-                self.serConn.sendSerialdata(packet)
-                print packet
+                # self.serConn.sendSerialdata((0,0,0))
+                while (self.runFlag):
+                    camera.capture(stream, 'bgr', use_video_port=True)
+                    # stream.array now contains the image data in BGR order
+                    (theta,phi,realDist) = self.outputDistAng(stream.array)
+                    stream.seek(0)
+                    stream.truncate()
 
-        self.serConn.close()
-        self.close()
+                    packet = "(" + '%03d'%int(theta) + "," + '%03d'%int(phi) + "," + '%03d'%int(realDist) + ")"
+                    if packet == '(000,000,000)':
+                        print "no face"
+                    else:
+                        # self.serConn.sendSerialdata(packet)
+                        print packet
+
+                # self.serConn.close()
+                # self.close()
 
 
 if __name__ == '__main__':

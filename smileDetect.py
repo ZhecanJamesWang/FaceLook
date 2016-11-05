@@ -3,7 +3,8 @@ import cv2
 from scipy.ndimage import zoom
 import numpy as np
 
-svc_1 = joblib.load('./data/faceDetectSVC.pkl')
+# svc_1 = joblib.load('./data/faceDetectSVC.pkl')
+svc_1 = joblib.load('faceDetectSVC.pkl')
 
 
 def detect_face(frame):
@@ -67,7 +68,6 @@ while True:
     
     # predict output
     for face in detected_faces:
-        print 7
         (x, y, w, h) = face
         if w > 100:
             print 8
