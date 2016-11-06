@@ -7,55 +7,93 @@
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
 //setting the motor
-Adafruit_DCMotor *motorR = AFMS.getMotor(4); //right motor
+Adafruit_DCMotor *motorR = AFMS.getMotor(2); //right motor
 Adafruit_DCMotor *motorL = AFMS.getMotor(1); //left motor
 
 Servo servo1;
 
-char incomingByte = 0;
-String packet = "";
-int append = 0;
+char c;
+int ang1 = 0;
+int ang2 = 0;
+int dist = 0;
 
-float dist = 0.0;
+String readString = "";
+String initializer = "";
+String servox = "";
+String servoy = "";
+String dists = "";
 
-float ang1 = 0.0;
-float ang2 = 0.0;
-
-
-
-//float updateRate = 0.5;
-//
-//boolean dstFlag = True;
-//float initDist = 0;
-//boolean firstDistFlag = True;
-//float distThreshold = 0.5;
-//float distToTarget = 10;
-//float speedCons = 0.5;
-//
-//
-//boolean angFlag = False;
-//float initAng = 0;
-//boolean firstAngFlag = False;
-//float angThreshold = 0.5;
-//float angCons = 0.5;
-
-
+int ang2_0 = 0;
+int ang2_1 = 0;
+int ang2_f = 0;
 
 float vr = 0;
 float vl = 0;
 int cons = 3;
 
 
-
 void setup() {
   servo1.attach(9);
   Serial.begin(9600); //setting up Serial library at 9600 bps
-  servo1.write(30);
-  establishContact();
+  servo1.write(0);
   AFMS.begin(); //create with default frequency 1.6kHz
   //starting direction (forward, backward, release)
   motorL->run(FORWARD);
   motorR->run(BACKWARD);
+}
+
+void establishContact() {
+  while (Serial.available() <= 0) {
+    Serial.println('A');   // send a capital A to establish contact
+    delay(300);
+  }
+}
+
+void readserial() {
+  while (Serial.available() > 0 && c != ")") {
+    c = Serial.read();  //gets one byte from serial buffer
+    readString += c; //makes the string readString
+  }
+  c = ""; //empty character buffer
+}
+
+void parsepacket() {
+  readString.trim();
+  initializer = readString.substring(0, 1);
+  if (initializer == "(") {
+    Serial.print(readString);
+    servox = readString.substring(1, 4);
+    servoy = readString.substring(5, 8);
+    dists = readString.substring(9, 12);
+
+    //      Serial.print(servox);
+
+    char carray1[4];
+    char carray2[4];
+    char carray3[4];
+
+    servox.toCharArray(carray1, sizeof(carray1));
+    servoy.toCharArray(carray2, sizeof(carray2));
+    dists.toCharArray(carray3, sizeof(carray3));
+
+    Serial.print(carray1);
+
+    ang1 = atoi(carray1);
+    ang2 = atoi(carray2);
+    dist = atoi(carray3);
+    Serial.print(ang1);
+  }
+
+  readString = "";
+
+}
+
+void moveservo() {
+  ang2_0 = ang2_1;
+  ang2_1 = ang2;
+  ang2_f = ang2_f + ang2_1 - ang2_0;
+  int n1 = map(ang2_f, 0, 180, 1000, 2000);
+  servo1.writeMicroseconds(n1);
 }
 
 void goStraight() {
@@ -63,135 +101,47 @@ void goStraight() {
   motorL->setSpeed(20);
 }
 
-void turnLeft() {
-  motorR->setSpeed(40);
-  motorL->setSpeed(20);
+void stop_car() {
+  motorR->setSpeed(0);
+  motorL->setSpeed(0);
 }
 
-void turnRight() {
-  motorR->setSpeed(20);
-  motorL->setSpeed(40);
-}
-
-void establishContact() {
-  while (Serial.available() <= 0) {
-    Serial.print('A');   // send a capital A
-    delay(300);
+void controlcar() {
+  if (dist <= 10) {             // if there is not detected face(dist = 0) or the distance is too close, break
+    stop_car();
   }
-}
-
-void parsepacket(String packet1) {
-  int len = packet1.length();
-  packet1.remove(0, 1);
-  packet1[len - 2] = '\0';
-  int cmaIdx = packet1.indexOf(',');
-  int scmaIdx = packet1.indexOf(',', cmaIdx + 1);
-  String sTheta = packet1.substring(0, cmaIdx - 1);
-  String sPhi = packet1.substring(cmaIdx + 2, scmaIdx);
-  String sDist = packet1.substring(scmaIdx + 2);
-  sTheta.trim();
-  sPhi.trim();
-  sDist.trim();
-  Serial.print("before:");
-  Serial.print(sTheta);
-  Serial.print(" ");
-  Serial.print(sPhi);
-  Serial.print(" ");
-  Serial.println(sDist);
-  //    String sThetat= "80.9";
-  //    String sPhit = "91.05";
-  //    String sDistt = "60.1";
-
-  ang1 = sTheta.toInt();
-  ang2 = sPhi.toInt();
-  dist = sDist.toInt();
-  //  Serial.print("after:");
-  //  Serial.print(ang1);
-  //  Serial.print("\t");
-  //  Serial.print(ang2);
-  //  Serial.print("\t");
-  //  Serial.println(dist);
+  else {
+    if (ang1 >= -2 and ang1 <= 2) {
+      goStraight();
+    }
+    else if (ang1 > 2) {
+      vr = 20 + cons * (ang1 - 2);
+      vl = 20;
+      motorR->setSpeed(vr);
+      motorL->setSpeed(vl);
+    }
+    else if (ang1 < -2) {
+      vr = 20;
+      vl = 20 + cons * (abs(ang1) - 2);
+      motorR->setSpeed(vr);
+      motorL->setSpeed(vl);
+    }
+  }
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    // read the incoming byte:
-    incomingByte = Serial.read();
-    if (incomingByte == ';') {
-      parsepacket(packet);
-
-
-      //// distance checking and setting speed
-      //     if(firstDistFlag == True){
-      //        initDist = dist;
-      //        firstDistFlag = False;
-      //      }
-      //      if(dstFlag == True){
-      //        speed1 = speedCons * (dist - distToTarget);
-      //        speed2 = speedCons * (dist - distToTarget);
-      //        if(dist - initDist*updateRate < distThreshold){
-      //          dstFlag = False;
-      //          angFlag = True;
-      //          firstAngFlag = True;
-      //         }
-      //        }
-      ////////////////////////////////////////
-      //
-      //// angle checking and setting speed
-      //     if(firstAngFlag == True){
-      //        initAng = ang1;
-      //        firstAngFlag = False;
-      //      }
-      //      if(angFlag == True){
-      //        if(ang1 > 0){
-      //          speed1 = angCons * ang1;
-      //          speed2 = 0;
-      //          }else{
-      //          speed2 = angCons * abs(ang1)
-      //          speed1 = 0;
-      //            }
-      //        if(ang1 - initAng*updateRate < angThreshold){
-      //          angFlag = False;
-      //          distFalg = True;
-      //          firstDistFlag = True;
-      //         }
-      //        }
-
-      //////////////////////////////////////
-
-
-
-
-
-      if (dist <= 10) {             // if there is not detected face(dist = 0) or the distance is too close, break
-        break;
-      }
-      else {
-        if (ang1 >= -5 and ang1 <= 5) {
-          goStraight();
-        }
-        else if (ang1 > 5) {
-          vr = 20 + cons * (ang1 - 5);
-          vl = 20;
-          motorR->setSpeed(vr);
-          motorL->setSpeed(vl);
-        }
-        else if (ang1 < -5) {
-          vr = 20;
-          vl = 20 + cons * (abs(ang1) - 5);
-          motorR->setSpeed(vr);
-          motorL->setSpeed(vl);
-        }
-      }
-
-      packet = "";
-
-    }
-    else {
-      packet += incomingByte;
-    }
-  }
-  else {
-    establishContact();
-  }
+  readserial();
+  parsepacket();
+  dist = 20;
+  Serial.print("(");
+  Serial.print(ang1);
+  Serial.print(",");
+  Serial.print(ang2);
+  Serial.print(",");
+  Serial.print(dist);
+  Serial.println(")");
+  Serial.flush();
+  delay(200);
+  moveservo();
+  controlcar();
 }
