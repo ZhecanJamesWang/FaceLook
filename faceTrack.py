@@ -1,63 +1,64 @@
 """ Experiment with face detection and image filtering using OpenCV """
-
+# import the necessary packages
+from picamera.array import PiRGBArray
+import picamera
+import time
 import cv2
 import numpy as np
 from math import sqrt, pi
-import serialout as st
+# import serialout as st
 
 
 class faceTrack(object):
     """class for face tracking algorithm"""
     def __init__(self, calibrateFlag = False):
-        self.cap = cv2.VideoCapture(0)
-        #Initial read of the frame size
-        ret,frame = self.cap.read()
-        height,width,channel = frame.shape
-        self.mid = (int(width/2),int(height/2))     
         self.calibrateFlag = calibrateFlag
         self.focus = 816 # px, webcam focal distance
         self.realWidth = 16  # cm, face width
         self.runFlag = True
-        self.serConn = st.serialConnect()
+        self.firstRun = True
+        # self.serConn = st.serialConnect()
 
-    def calibrate(self, realDst, realWidth):
-        self.realWidth = realWidth
-        # function for calibrating focus of webcam
-        print("Stand and Press C")
-        runFlag = True
 
-        while(runFlag):
-            face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
-            ret, frame = self.cap.read() 
-           #faces = [[x,y,w,d]], (x,y) is the top left corner      
-            faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
-            #Need something to buffer x,y,w,d since sometimes it does not detect face
-            for (x,y,w,h) in faces:
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255))
-                #point on the center of the frame
-                center = (x+int(w/2),y+int(h/2))
-                cv2.circle(frame,center,5,(0,0,255),-1)
-                cv2.circle(frame,self.mid,5,(0,255,0),-1)
+    # def calibrate(self, realDst, realWidth):
+    #     self.realWidth = realWidth
+    #     # function for calibrating focus of webcam
+    #     print("Stand and Press C")
+    #     runFlag = True
 
-            cv2.imshow('frame',frame)
-            k = cv2.waitKey(1)
-            if k == ord('c') and faces !=():
-                self.focus = (w * realDst)/self.realWidth
-                print "The webcam focal distance is: ", self.focus
-                runFlag = False
-            elif k == ord('q'):
-            	runFlag = False
+    #     while(runFlag):
+    #         face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
+    #         ret, frame = self.cap.read() 
+    #        #faces = [[x,y,w,d]], (x,y) is the top left corner      
+    #         faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
+    #         #Need something to buffer x,y,w,d since sometimes it does not detect face
+    #         for (x,y,w,h) in faces:
+    #             cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255))
+    #             #point on the center of the frame
+    #             center = (x+int(w/2),y+int(h/2))
+    #             cv2.circle(frame,center,5,(0,0,255),-1)
+    #             cv2.circle(frame,self.mid,5,(0,255,0),-1)
 
-        self.cap.release()
-        cv2.destroyAllWindows() 
+    #         cv2.imshow('frame',frame)
+    #         k = cv2.waitKey(1)
+    #         if k == ord('c') and faces !=():
+    #             self.focus = (w * realDst)/self.realWidth
+    #             print "The webcam focal distance is: ", self.focus
+    #             runFlag = False
+    #         elif k == ord('q'):
+    #         	runFlag = False
+
+    #     self.cap.release()
+    #     cv2.destroyAllWindows() 
+
     def rad2deg(self,ang):
         return ang*(180/pi)
     
-    def outputDistAng(self):
+    def outputDistAng(self, frame):
         theta,phi,realDist = 0, 0, 0
         # use camerca video feed to calculate distance and angle of face referenced to the camera
         face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
-        ret, frame = self.cap.read() 
+
        #faces = [[x,y,w,d]], (x,y) is the top left corner      
         faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
         #Need something to buffer x,y,w,d since sometimes it does not detect face
@@ -79,8 +80,8 @@ class faceTrack(object):
             #phi is positive in left direction (right hand rule)
             phi = -self.rad2deg(np.arctan((float(v2mid[1]))/self.focus))
             realDist = (self.realWidth*d2f)/w
-        cv2.imshow('frame',frame)
 
+        cv2.imshow('frame',frame)
 
         k = cv2.waitKey(1)
         if k == ord('q'):
@@ -92,28 +93,40 @@ class faceTrack(object):
         cv2.destroyAllWindows() 
      
 
-    def run(self):
-        if not self.serConn.isopen:
-            self.serConn.open()
-        if self.calibrateFlag:
-            data = raw_input("please input the distance and face width: (example: distance, width)")
-            [realDst, realWidth] = data.split(",")
-            self.calibrate(float(realDst), float(realWidth))
+    def run(self): 
+        # if not self.serConn.isopen:
+            # self.serConn.open()
+        # if self.calibrateFlag:
+        #     data = raw_input("please input the distance and face width: (example: distance, width)")
+        #     [realDst, realWidth] = data.split(",")
+        #     self.calibrate(float(realDst), float(realWidth))
+        with picamera.PiCamera() as camera:
+            with picamera.array.PiRGBArray(camera) as stream:
+                camera.resolution = (160, 120)   
+                # self.serConn.sendSerialdata((0,0,0))
+                while (self.runFlag):
+                    camera.capture(stream, 'bgr', use_video_port=True)
+                    # stream.array now contains the image data in BGR order
+                    frame = stream.array
+                    (theta,phi,realDist) = self.outputDistAng(frame)
 
-        
-        self.serConn.sendSerialdata("(000,000,000)")
-        while (self.runFlag):
-            (theta,phi,realDist) = self.outputDistAng()
-            packet = "(" + '%03d'%int(theta) + "," + '%03d'%int(phi) + "," + '%03d'%int(realDist) + ")"
-            if packet == '(090,090,000)':
-                print "no face"
-            else:
-                print "packet",packet
-                self.serConn.sendSerialdata(packet)
+                    if self.firstRun:
+                        height,width,channel = frame.shape
+                        self.mid = (int(width/2),int(height/2)) 
+                        self.firstRun = False
 
+                    stream.seek(0)
+                    stream.truncate()
 
-        self.serConn.close()
-        self.close()
+                    packet = "(" + '%03d'%int(theta) + "," + '%03d'%int(phi) + "," + '%03d'%int(realDist) + ")"
+                    if packet == '(090,090,000)':
+                        print "no face"
+                    else:
+                        # self.serConn.sendSerialdata(packet)
+                        print packet
+
+                # self.serConn.close()
+                # self.close()
 
 
 if __name__ == '__main__':
