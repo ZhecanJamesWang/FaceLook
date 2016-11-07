@@ -17,39 +17,39 @@ class faceTrack(object):
         self.realWidth = 16  # cm, face width
         self.runFlag = True
         self.firstRun = True
-        # self.serConn = st.serialConnect()
+        self.serConn = st.serialConnect()
 
 
-    # def calibrate(self, realDst, realWidth):
-    #     self.realWidth = realWidth
-    #     # function for calibrating focus of webcam
-    #     print("Stand and Press C")
-    #     runFlag = True
+    def calibrate(self, realDst, realWidth):
+        self.realWidth = realWidth
+        # function for calibrating focus of webcam
+        print("Stand and Press C")
+        runFlag = True
 
-    #     while(runFlag):
-    #         face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
-    #         ret, frame = self.cap.read() 
-    #        #faces = [[x,y,w,d]], (x,y) is the top left corner      
-    #         faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
-    #         #Need something to buffer x,y,w,d since sometimes it does not detect face
-    #         for (x,y,w,h) in faces:
-    #             cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255))
-    #             #point on the center of the frame
-    #             center = (x+int(w/2),y+int(h/2))
-    #             cv2.circle(frame,center,5,(0,0,255),-1)
-    #             cv2.circle(frame,self.mid,5,(0,255,0),-1)
+        while(runFlag):
+            face_cascade = cv2.CascadeClassifier('./lib/haarcascade_frontalface_alt.xml')
+            ret, frame = self.cap.read() 
+           #faces = [[x,y,w,d]], (x,y) is the top left corner      
+            faces = face_cascade.detectMultiScale(frame, scaleFactor=1.2, minSize=(20,20))
+            #Need something to buffer x,y,w,d since sometimes it does not detect face
+            for (x,y,w,h) in faces:
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255))
+                #point on the center of the frame
+                center = (x+int(w/2),y+int(h/2))
+                cv2.circle(frame,center,5,(0,0,255),-1)
+                cv2.circle(frame,self.mid,5,(0,255,0),-1)
 
-    #         cv2.imshow('frame',frame)
-    #         k = cv2.waitKey(1)
-    #         if k == ord('c') and faces !=():
-    #             self.focus = (w * realDst)/self.realWidth
-    #             print "The webcam focal distance is: ", self.focus
-    #             runFlag = False
-    #         elif k == ord('q'):
-    #         	runFlag = False
+            cv2.imshow('frame',frame)
+            k = cv2.waitKey(1)
+            if k == ord('c') and faces !=():
+                self.focus = (w * realDst)/self.realWidth
+                print "The webcam focal distance is: ", self.focus
+                runFlag = False
+            elif k == ord('q'):
+            	runFlag = False
 
-    #     self.cap.release()
-    #     cv2.destroyAllWindows() 
+        self.cap.release()
+        cv2.destroyAllWindows() 
 
     def rad2deg(self,ang):
         return ang*(180/pi)
@@ -94,12 +94,12 @@ class faceTrack(object):
      
 
     def run(self): 
-        # if not self.serConn.isopen:
-            # self.serConn.open()
-        # if self.calibrateFlag:
-        #     data = raw_input("please input the distance and face width: (example: distance, width)")
-        #     [realDst, realWidth] = data.split(",")
-        #     self.calibrate(float(realDst), float(realWidth))
+        if not self.serConn.isopen:
+            self.serConn.open()
+        if self.calibrateFlag:
+            data = raw_input("please input the distance and face width: (example: distance, width)")
+            [realDst, realWidth] = data.split(",")
+            self.calibrate(float(realDst), float(realWidth))
         with picamera.PiCamera() as camera:
             with picamera.array.PiRGBArray(camera) as stream:
                 camera.resolution = (160, 120)   
@@ -122,11 +122,11 @@ class faceTrack(object):
                     if packet == '(090,090,000)':
                         print "no face"
                     else:
-                        # self.serConn.sendSerialdata(packet)
+                        self.serConn.sendSerialdata(packet)
                         print packet
 
-                # self.serConn.close()
-                # self.close()
+                self.serConn.close()
+                self.close()
 
 
 if __name__ == '__main__':
