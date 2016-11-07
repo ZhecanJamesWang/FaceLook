@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 from math import sqrt, pi
-# import serialout as st
+import serialout as st
 
 
 class faceTrack(object):
