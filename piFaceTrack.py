@@ -102,7 +102,7 @@ class faceTrack(object):
         #     self.calibrate(float(realDst), float(realWidth))
         with picamera.PiCamera() as camera:
             with picamera.array.PiRGBArray(camera) as stream:
-                camera.resolution = (80, 60)   
+                camera.resolution = (160, 120)   
                 # self.serConn.sendSerialdata((0,0,0))
                 while (self.runFlag):
                     camera.capture(stream, 'bgr', use_video_port=True)
