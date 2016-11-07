@@ -1,23 +1,34 @@
 #include <Servo.h>
+#include <Wire.h>
+#include <Adafruit_MotorShield.h>
+#include "utility/Adafruit_MS_PWMServoDriver.h"
+
+//Creating motor shield object w/ default I2C address
+Adafruit_MotorShield AFMS = Adafruit_MotorShield();
+
+//setting the motor
+Adafruit_DCMotor *motorR = AFMS.getMotor(4); //right motor
+Adafruit_DCMotor *motorL = AFMS.getMotor(1); //left motor
+
 
 int c;
 int servoxpos=0;
 int servoypos=0;
 int dist = 0;
-Servo myServox;
-Servo myServoy;
+Servo servo1;
 int packet[12];
+int ang2_0=0;
+int ang2_1=0;
+int ang2_f=0;
 
 void setup()
 {
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
-  myServox.attach(9);
-  myServoy.attach(10); 
+  servo1.attach(9);
   Serial.begin(9600);
   Serial.println("Testing Serial");
 }
-
 
 void establishContact() {
   while (Serial.available() <= 0) {
@@ -56,10 +67,53 @@ void parsepacket(){
 }
 
 void moveservo(){
-  int n1 = map(servoxpos,0,180,1000,2000);
-  int n2 = map(servoypos,0,180,1000,2000);
-  myServox.writeMicroseconds(n1);
-  myServoy.writeMicroseconds(n2);
+  ang2_0=ang2_1;
+  ang2_1=servoypos;
+  ang2_f=ang2_f+ang2_1-ang2_0;
+  int n1 = map(ang2_f,0,180,1000,2000);
+  servo1.writeMicroseconds(n1);
+}
+
+
+void goStraight() {
+  motorR->setSpeed(20);
+  motorL->setSpeed(20);
+}
+
+void turnLeft() {
+  motorR->setSpeed(40);
+  motorL->setSpeed(20);
+}
+
+void turnRight() {
+  motorR->setSpeed(20);
+  motorL->setSpeed(40);
+}
+
+void stop_car(){
+  motorR->setSpeed(0);
+  motorL->setSpeed(0);
+}
+
+void movecar(){
+  if (dist <= 10) {             // if there is not detected face(dist = 0) or the distance is too close, break
+    stop_car();
+  }
+  else {
+    if (servoxpos >= -5 and servoxpos <= 5) {
+      goStraight();
+    }
+    else if (servoxpos >= 0) {
+      turnRight();
+      vr = 20;
+      vl = 20 + cons * (servoxpos - 5);
+    }
+    else if (servoxpos <= 0) {
+      turnLeft();
+      vl = 20;
+      vr = 20 + cons * (abs(servoxpos) - 5);
+    }
+  }
 }
 
 
@@ -77,4 +131,5 @@ void loop() {
   Serial.flush();
   delay(200);
   moveservo();
+//  movecar();
 }
